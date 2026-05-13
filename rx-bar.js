@@ -17,6 +17,18 @@ class RxBar {
   }
 
   async _init() {
+    // Handle cross-origin SSO: portal passes tokens in URL hash
+    const hash = window.location.hash.slice(1);
+    if (hash.includes('access_token=')) {
+      const p = new URLSearchParams(hash);
+      const at = p.get('access_token');
+      const rt = p.get('refresh_token');
+      if (at && rt) {
+        await this._sb.auth.setSession({ access_token: at, refresh_token: rt });
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+
     const { data: { session } } = await this._sb.auth.getSession();
     if (!session) {
       window.location.href = RXB_PORTAL + 'index.html?returnTo=' + encodeURIComponent(window.location.href);
