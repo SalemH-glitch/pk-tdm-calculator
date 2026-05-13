@@ -346,6 +346,7 @@
       .metrics-row{flex-direction:column}
     }
   </style>
+  <link rel="stylesheet" href="rx-bar.css">
 </head>
 <body>
 
@@ -1458,6 +1459,44 @@ selectDrug('vancomycin');
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.tagName!=='BUTTON') handleCalculate();
 });
+
+// ── RxBar integration ──
+let _rxbar = null;
+if (window.RxBar) {
+  _rxbar = new RxBar('pk-tdm');
+}
+
+document.addEventListener('rxb:patient-selected', e => {
+  const p = e.detail;
+  if (p.weight_kg != null) {
+    const wt = document.getElementById('pt-weight');
+    if (wt) { wt.value = p.weight_kg; wt.dispatchEvent(new Event('input')); }
+  }
+  const nm = document.getElementById('pt-name');
+  if (nm) nm.value = `${p.first_name} ${p.last_name} / ${p.patient_id}`;
+});
+
+document.addEventListener('rxb:patient-cleared', () => {
+  const nm = document.getElementById('pt-name');
+  if (nm) nm.value = '';
+});
+
+// Wrap handleCalculate to also save to Supabase
+const _origHandleCalculate = handleCalculate;
+window.handleCalculate = function() {
+  _origHandleCalculate();
+  if (!_rxbar) return;
+  const drug = document.querySelector('.drug-card.selected')?.dataset?.id || 'unknown';
+  const wt   = document.getElementById('pt-weight')?.value;
+  const dose = document.getElementById('dose')?.value;
+  _rxbar.saveCalculation(
+    `PK/TDM — ${drug}`,
+    { drug, weight: wt, dose },
+    { calculated: true }
+  );
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="rx-bar.js"></script>
 </body>
 </html>
