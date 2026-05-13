@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IV Drug PK / TDM Calculator</title>
+  <style>
+    :root {
+      --primary:      #1d4ed8;
+      --primary-lt:   #dbeafe;
+      --teal:         #0891b2;
+      --success:      #16a34a;
+      --success-bg:   #dcfce7;
+      --success-br:   #86efac;
+      --warning:      #d97706;
+      --warning-bg:   #fef3c7;
+      --warning-br:   #fde68a;
+      --danger:       #dc2626;
+      --danger-bg:    #fee2e2;
+      --danger-br:    #fca5a5;
+      --gray-50:  #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-900: #0f172a;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --border:   #e2e8f0;
+      --radius:   0.5rem;
+      --sh:  0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+      --shm: 0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      background:var(--gray-100);color:var(--text);line-height:1.5;min-height:100vh}
+
+    /* ── header ── */
+    header{
+      background:linear-gradient(135deg,#1e3a8a 0%,var(--primary) 55%,var(--teal) 100%);
+      color:#fff;padding:1.125rem 1.75rem;
+      display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:.75rem
+    }
+    header h1{font-size:1.25rem;font-weight:700;letter-spacing:-.01em}
+    header p{font-size:.8rem;opacity:.8;margin-top:.1rem}
+    .btn-print{
+      display:flex;align-items:center;gap:.375rem;
+      background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+      color:#fff;border-radius:var(--radius);padding:.4rem .875rem;
+      font-size:.8rem;font-weight:500;cursor:pointer;transition:background .15s
+    }
+    .btn-print:hover{background:rgba(255,255,255,.25)}
+
+    /* ── disclaimer ── */
+    .disclaimer{
+      background:#fef3c7;border-bottom:2px solid #fde68a;
+      padding:.5rem 1.75rem;font-size:.775rem;color:#78350f;
+      display:flex;align-items:center;gap:.5rem
+    }
+    .disclaimer svg{flex-shrink:0}
+
+    /* ── drug selector ── */
+    #selector-wrap{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:1rem 1.75rem
+    }
+    #selector-wrap h2{font-size:.75rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--gray-500);margin-bottom:.625rem}
+    .drug-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+      gap:.5rem
+    }
+    .drug-card{
+      border:2px solid var(--border);border-radius:.625rem;
+      padding:.5rem .625rem;cursor:pointer;
+      transition:border-color .15s,background .15s,transform .1s;
+      background:#fff;user-select:none
+    }
+    .drug-card:hover{border-color:var(--gray-300);background:var(--gray-50)}
+    .drug-card.selected{background:var(--selected-bg,#eff6ff);border-color:var(--selected-color,var(--primary))}
+    .drug-card:active{transform:scale(.97)}
+    .dc-class{font-size:.6875rem;color:var(--muted);margin-bottom:.2rem;
+      display:flex;align-items:center;gap:.3rem}
+    .dc-dot{width:.5rem;height:.5rem;border-radius:50%;display:inline-block;flex-shrink:0}
+    .dc-name{font-size:.875rem;font-weight:600;color:var(--text);line-height:1.2}
+    .dc-mode{
+      display:inline-block;margin-top:.3rem;
+      font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+      padding:.1rem .375rem;border-radius:999px;
+      background:var(--gray-100);color:var(--gray-500)
+    }
+    .drug-card.selected .dc-mode{background:var(--selected-color,var(--primary));color:#fff}
+
+    /* ── drug info strip ── */
+    #drug-strip{
+      background:var(--strip-bg,#eff6ff);
+      border-bottom:1px solid var(--strip-border,#bfdbfe);
+      padding:.625rem 1.75rem;
+      display:flex;align-items:center;flex-wrap:wrap;gap:.75rem;
+      font-size:.8125rem
+    }
+    #drug-strip .strip-name{font-weight:700;color:var(--strip-color,var(--primary));font-size:.9375rem}
+    #drug-strip .strip-target{
+      background:rgba(255,255,255,.7);border:1px solid var(--strip-border,#bfdbfe);
+      border-radius:.375rem;padding:.25rem .625rem;font-size:.8rem
+    }
+    #drug-strip .strip-guideline{color:var(--muted);font-size:.75rem;margin-left:auto}
+
+    /* ── custom config ── */
+    #custom-config{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:1rem 1.75rem
+    }
+    #custom-config h3{font-size:.8125rem;font-weight:600;color:var(--gray-700);margin-bottom:.75rem}
+    .hidden{display:none!important}
+
+    /* ── layout ── */
+    main{
+      max-width:1280px;margin:1.25rem auto;
+      padding:0 1.5rem 3rem;
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:1.25rem;align-items:start
+    }
+    @media(max-width:900px){main{grid-template-columns:1fr}}
+    @media(max-width:480px){main{padding:0 .75rem 2rem}#selector-wrap,#drug-strip{padding-left:.75rem;padding-right:.75rem}}
+
+    /* ── cards ── */
+    .card{background:#fff;border:1px solid var(--border);border-radius:.75rem;box-shadow:var(--sh);overflow:hidden}
+    .card+.card{margin-top:1.125rem}
+    .card-head{background:var(--gray-50);border-bottom:1px solid var(--border);
+      padding:.75rem 1.125rem;display:flex;align-items:center;gap:.5rem}
+    .card-head h2{font-size:.9rem;font-weight:600;color:var(--gray-700)}
+    .card-head .badge{margin-left:auto;font-size:.65rem;font-weight:600;
+      padding:.1875rem .5rem;border-radius:999px;background:var(--primary-lt);color:var(--primary)}
+    .card-body{padding:1.125rem}
+
+    /* ── form ── */
+    .fg{display:flex;flex-direction:column;gap:.25rem}
+    .fg2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    .fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+    .full{grid-column:1/-1}
+    label{font-size:.8rem;font-weight:500;color:var(--gray-700)}
+    label sup{color:var(--danger)}
+    input[type=text],input[type=number],input[type=time],select{
+      border:1px solid var(--border);border-radius:var(--radius);
+      padding:.4375rem .75rem;font-size:.9375rem;color:var(--text);
+      background:#fff;width:100%;transition:border-color .15s,box-shadow .15s;appearance:none
+    }
+    input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+    input.err{border-color:var(--danger);background:#fff8f8}
+    .hint{font-size:.725rem;color:var(--muted)}
+    .computed{font-size:.725rem;color:var(--teal);font-weight:500;min-height:1rem}
+    .divider{height:1px;background:var(--border);margin:.875rem 0}
+    .sec-label{font-size:.6875rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--gray-500);margin-bottom:.625rem}
+
+    /* ── level panels ── */
+    .lvl-panel{border:1px solid var(--border);border-radius:var(--radius);
+      padding:.875rem;background:var(--gray-50)}
+    .lvl-panel+.lvl-panel{margin-top:.625rem}
+    .lvl-title{font-size:.875rem;font-weight:600;color:var(--primary);
+      display:flex;align-items:center;gap:.375rem;margin-bottom:.625rem}
+    .dot{width:.5625rem;height:.5625rem;border-radius:50%;display:inline-block}
+    .dot1{background:var(--primary)}.dot2{background:var(--teal)}
+
+    /* ── targets ── */
+    #target-section .target-row{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-start}
+    #target-section .target-row .fg{flex:0 0 auto}
+    #target-section .target-row input{width:90px}
+    .target-sep{margin-top:1.5rem;color:var(--muted);font-size:.9375rem}
+
+    /* ── calc button ── */
+    .btn-calc{
+      width:100%;margin-top:1.125rem;
+      background:linear-gradient(135deg,var(--primary) 0%,var(--teal) 100%);
+      color:#fff;border:none;border-radius:var(--radius);
+      padding:.8125rem 1.5rem;font-size:.9375rem;font-weight:600;
+      cursor:pointer;transition:opacity .15s,transform .1s;letter-spacing:.01em
+    }
+    .btn-calc:hover{opacity:.92}
+    .btn-calc:active{transform:translateY(1px)}
+
+    /* ── placeholder ── */
+    .placeholder{display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:3.5rem 1.5rem;color:var(--muted);text-align:center;gap:.75rem}
+    .placeholder svg{opacity:.2;width:3rem;height:3rem}
+    .placeholder p{font-size:.9rem}
+
+    /* ── PK params table ── */
+    .pk-table{width:100%;border-collapse:collapse}
+    .pk-table tr{border-bottom:1px solid var(--gray-100)}
+    .pk-table tr:last-child{border-bottom:none}
+    .pk-table td{padding:.5rem .25rem;font-size:.9rem}
+    .pk-table td:first-child{color:var(--muted);font-size:.8375rem}
+    .pk-table td:last-child{text-align:right;font-weight:600}
+    sub{font-size:.7em}
+
+    /* ── primary metric(s) display ── */
+    .metrics-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.875rem}
+    .metric-block{
+      flex:1;min-width:130px;border-radius:var(--radius);padding:.875rem 1rem;
+      display:flex;flex-direction:column;gap:.125rem
+    }
+    .metric-block.ok  {background:var(--success-bg);border:1px solid var(--success-br)}
+    .metric-block.low {background:var(--warning-bg);border:1px solid var(--warning-br)}
+    .metric-block.high{background:var(--danger-bg); border:1px solid var(--danger-br)}
+    .metric-label{font-size:.75rem;color:var(--muted)}
+    .metric-val{font-size:1.875rem;font-weight:800;line-height:1}
+    .metric-block.ok   .metric-val{color:var(--success)}
+    .metric-block.low  .metric-val{color:var(--warning)}
+    .metric-block.high .metric-val{color:var(--danger)}
+    .metric-unit{font-size:.75rem;color:var(--muted)}
+    .metric-badge{
+      display:inline-flex;align-items:center;gap:.25rem;margin-top:.375rem;
+      padding:.2rem .55rem;border-radius:999px;font-size:.7rem;font-weight:700
+    }
+    .mbadge-ok  {background:var(--success-bg);color:var(--success)}
+    .mbadge-low {background:var(--warning-bg);color:var(--warning)}
+    .mbadge-high{background:var(--danger-bg); color:var(--danger)}
+
+    /* ── AUC bar ── */
+    .bar-wrap{margin:.5rem 0}
+    .bar-labels{display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted);margin-bottom:.2rem}
+    .bar-track{height:9px;background:var(--gray-200);border-radius:999px;position:relative;overflow:visible}
+    .bar-zone{position:absolute;height:100%;background:rgba(22,163,74,.15);
+      border-left:2px solid var(--success);border-right:2px solid var(--success);border-radius:2px}
+    .bar-zone.warn-zone{background:rgba(217,119,6,.15);border-color:var(--warning)}
+    .bar-marker{
+      position:absolute;width:4px;height:16px;top:-3.5px;
+      transform:translateX(-50%);border-radius:2px;
+      background:var(--primary);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--primary);
+      transition:left .3s ease
+    }
+    .bar-legend{display:flex;justify-content:center;gap:1.25rem;
+      font-size:.675rem;color:var(--muted);margin-top:.4rem;flex-wrap:wrap}
+    .bar-legend span{display:flex;align-items:center;gap:.3rem}
+    .bleg-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+    /* ── recommendations table ── */
+    .rec-table{width:100%;border-collapse:collapse;font-size:.85rem}
+    .rec-table th{
+      background:var(--gray-50);border-bottom:2px solid var(--border);
+      padding:.5rem .625rem;text-align:left;
+      font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-500)
+    }
+    .rec-table td{padding:.625rem .625rem;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+    .rec-table tr:last-child td{border-bottom:none}
+    .rec-table tr.best td:first-child{border-left:3px solid var(--success);padding-left:calc(.625rem - 3px)}
+    .rec-table tr.best{background:#f0fdf4}
+    .pill{display:inline-block;padding:.175rem .5rem;border-radius:999px;font-size:.75rem;font-weight:600}
+    .pill-ok  {background:var(--success-bg);color:var(--success)}
+    .pill-low {background:var(--warning-bg);color:var(--warning)}
+    .pill-high{background:var(--danger-bg); color:var(--danger)}
+
+    /* ── alerts ── */
+    .alert{padding:.625rem .875rem;border-radius:var(--radius);font-size:.85rem;
+      display:flex;gap:.5rem;align-items:flex-start;margin-top:.625rem}
+    .alert svg{flex-shrink:0;margin-top:.1rem}
+    .alert-warn{background:var(--warning-bg);color:#78350f;border:1px solid var(--warning-br)}
+    .alert-danger{background:var(--danger-bg);color:#7f1d1d;border:1px solid var(--danger-br)}
+    .alert-info{background:var(--primary-lt);color:#1e3a8a;border:1px solid #bfdbfe}
+
+    /* ── equations ── */
+    details{border:1px solid var(--border);border-radius:var(--radius);margin-top:.875rem}
+    summary{padding:.5rem .875rem;font-size:.8rem;font-weight:600;color:var(--gray-600);
+      cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:.5rem}
+    summary::before{content:"▶";font-size:.6rem;transition:transform .2s}
+    details[open] summary::before{transform:rotate(90deg)}
+    .eq-body{padding:.625rem .875rem .875rem;border-top:1px solid var(--border);
+      font-size:.8rem;color:var(--muted)}
+    .eq-body p{margin-top:.35rem}
+    code{background:var(--gray-100);padding:.05rem .3rem;border-radius:.25rem;
+      font-family:'SF Mono','Fira Code',monospace;font-size:.73rem;color:var(--gray-700)}
+
+    /* ── error ── */
+    .err-card{background:var(--danger-bg);border:1px solid var(--danger-br);
+      border-radius:var(--radius);padding:1rem;color:#7f1d1d}
+    .err-card strong{display:block;margin-bottom:.375rem}
+    .err-card ul{padding-left:1.25rem}
+    .err-card li{font-size:.875rem;margin-top:.2rem}
+
+    /* ── dark mode ── */
+    html[data-theme="dark"] { color-scheme: dark }
+    html[data-theme="dark"] body { background: #020617; color: #e2e8f0 }
+    html[data-theme="dark"] .card { background: #1e293b; border-color: #334155 }
+    html[data-theme="dark"] .card-head { background: #0f172a; border-color: #334155 }
+    html[data-theme="dark"] #selector-wrap,
+    html[data-theme="dark"] #custom-config { background: #1e293b; border-color: #334155 }
+    html[data-theme="dark"] .drug-card { background: #0f172a; border-color: #334155 }
+    html[data-theme="dark"] .drug-card:hover { background: #1e293b; border-color: #475569 }
+    html[data-theme="dark"] .dc-name { color: #e2e8f0 }
+    html[data-theme="dark"] .dc-class { color: #94a3b8 }
+    html[data-theme="dark"] .drug-card.selected { background: var(--selected-bg) }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select { background: #0f172a; color: #e2e8f0; border-color: #334155 }
+    html[data-theme="dark"] input:focus,
+    html[data-theme="dark"] select:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.15) }
+    html[data-theme="dark"] input.err { background: #1c0a0a }
+    html[data-theme="dark"] .lvl-panel { background: #0f172a; border-color: #334155 }
+    html[data-theme="dark"] #inf-end-disp { background: #0f172a; border-color: #334155; color: #94a3b8 }
+    html[data-theme="dark"] .divider { background: #334155 }
+    html[data-theme="dark"] .hint { color: #64748b }
+    html[data-theme="dark"] .card-head h2 { color: #cbd5e1 }
+    html[data-theme="dark"] .sec-label { color: #64748b }
+    html[data-theme="dark"] label { color: #cbd5e1 }
+    html[data-theme="dark"] .bar-track { background: #334155 }
+    html[data-theme="dark"] .pk-table tr { border-color: #1e293b }
+    html[data-theme="dark"] .pk-table td:first-child { color: #94a3b8 }
+    html[data-theme="dark"] .rec-table th { background: #0f172a; border-color: #334155; color: #64748b }
+    html[data-theme="dark"] .rec-table td { border-color: #1e293b }
+    html[data-theme="dark"] .rec-table tr.best { background: #052e16 }
+    html[data-theme="dark"] details { border-color: #334155 }
+    html[data-theme="dark"] summary { color: #94a3b8 }
+    html[data-theme="dark"] .eq-body { border-color: #334155; color: #94a3b8 }
+    html[data-theme="dark"] code { background: #0f172a; color: #cbd5e1 }
+    html[data-theme="dark"] .metric-block.ok   { background: #052e16; border-color: #166534 }
+    html[data-theme="dark"] .metric-block.low  { background: #431407; border-color: #9a3412 }
+    html[data-theme="dark"] .metric-block.high { background: #450a0a; border-color: #991b1b }
+    html[data-theme="dark"] .alert-info   { background: #0c1a3a; border-color: #1d4ed8; color: #93c5fd }
+    html[data-theme="dark"] .alert-warn   { background: #431407; border-color: #9a3412; color: #fcd34d }
+    html[data-theme="dark"] .alert-danger { background: #450a0a; border-color: #991b1b; color: #fca5a5 }
+    html[data-theme="dark"] .disclaimer { background: #431407; border-color: #9a3412; color: #fcd34d }
+    html[data-theme="dark"] .err-card { background: #450a0a; border-color: #991b1b; color: #fca5a5 }
+    html[data-theme="dark"] .placeholder { color: #475569 }
+    html[data-theme="dark"] .muted { color: #64748b }
+    html[data-theme="dark"] #drug-strip .strip-guideline { color: #64748b }
+    html[data-theme="dark"] #drug-strip { background: #1e293b !important; border-color: #334155 !important }
+    html[data-theme="dark"] #drug-strip .strip-target { background: rgba(255,255,255,.07); border-color: #475569; color: #cbd5e1 }
+    html[data-theme="dark"] #drug-strip .strip-name { filter: brightness(1.4) }
+
+    /* ── print ── */
+    @media print{
+      .btn-print,.disclaimer,.btn-calc,#selector-wrap,details{display:none!important}
+      body{background:#fff}
+      main{grid-template-columns:1fr 1fr!important;max-width:100%!important;margin:0!important;padding:0!important}
+      .card{box-shadow:none!important;break-inside:avoid}
+      #drug-strip{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+
+    /* ── responsive ── */
+    @media(max-width:540px){
+      .fg2,.fg3{grid-template-columns:1fr}
+      .metrics-row{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>IV Drug PK / TDM Calculator</h1>
+    <p>First-order 1-compartment kinetics · Two-level method · Assumes steady state</p>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <button class="btn-print" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+      <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span id="theme-label">Dark</span>
+    </button>
+    <button class="btn-print" onclick="window.print()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / PDF
+    </button>
+  </div>
+</header>
+
+<div class="disclaimer">
+  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <strong>Clinical decision support only.</strong>&nbsp; All recommendations must be verified by a licensed pharmacist or physician before administration.
+</div>
+
+<!-- ══ Drug selector ══ -->
+<div id="selector-wrap">
+  <h2>Select Drug</h2>
+  <div class="drug-grid" id="drug-grid"></div>
+</div>
+
+<!-- ══ Drug info strip ══ -->
+<div id="drug-strip">
+  <span class="strip-name" id="strip-name">—</span>
+  <span class="strip-target" id="strip-target"></span>
+  <span class="strip-target" id="strip-mode-label"></span>
+  <span class="strip-guideline" id="strip-guideline"></span>
+</div>
+
+<!-- ══ Custom drug config (shown only when custom selected) ══ -->
+<div id="custom-config" class="hidden">
+  <h3>Custom Drug Configuration</h3>
+  <div class="fg2" style="max-width:800px">
+    <div class="fg">
+      <label for="c-name">Drug name</label>
+      <input type="text" id="c-name" placeholder="e.g. Meropenem" />
+    </div>
+    <div class="fg">
+      <label for="c-units">Concentration units</label>
+      <select id="c-units">
+        <option value="mg/L">mg/L (= mcg/mL)</option>
+        <option value="mcg/mL">mcg/mL</option>
+        <option value="ng/mL">ng/mL</option>
+        <option value="mmol/L">mmol/L</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label for="c-mode">Monitoring target</label>
+      <select id="c-mode" onchange="updateCustomTargetFields()">
+        <option value="AUC">AUC₂₄</option>
+        <option value="peak_trough">Peak &amp; Trough</option>
+        <option value="trough">Trough only</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label for="c-step">Dose rounding step</label>
+      <input type="number" id="c-step" value="50" min="1" max="500" />
+      <span class="hint">mg (rounds recommendations to nearest this value)</span>
+    </div>
+    <!-- AUC targets -->
+    <div class="fg" id="cf-auc-lo">
+      <label>AUC₂₄ minimum</label>
+      <input type="number" id="c-auc-lo" value="100" />
+      <span class="hint">mg·h/L (or units·h/unit)</span>
+    </div>
+    <div class="fg" id="cf-auc-hi">
+      <label>AUC₂₄ maximum</label>
+      <input type="number" id="c-auc-hi" value="400" />
+      <span class="hint">mg·h/L</span>
+    </div>
+    <!-- Peak/trough targets -->
+    <div class="fg hidden" id="cf-pk-lo">
+      <label>Peak minimum</label>
+      <input type="number" id="c-pk-lo" value="5" />
+    </div>
+    <div class="fg hidden" id="cf-pk-hi">
+      <label>Peak maximum</label>
+      <input type="number" id="c-pk-hi" value="10" />
+    </div>
+    <div class="fg hidden" id="cf-tr-max">
+      <label>Trough maximum (toxicity limit)</label>
+      <input type="number" id="c-tr-max" value="2" />
+    </div>
+    <!-- Trough-only targets -->
+    <div class="fg hidden" id="cf-tr-lo">
+      <label>Trough minimum</label>
+      <input type="number" id="c-tr-lo" value="10" />
+    </div>
+    <div class="fg hidden" id="cf-tr-hi">
+      <label>Trough maximum</label>
+      <input type="number" id="c-tr-hi" value="20" />
+    </div>
+  </div>
+</div>
+
+<!-- ══ Main two-column layout ══ -->
+<main>
+
+  <!-- ════ INPUT COLUMN ════ -->
+  <div id="input-col">
+
+    <div class="card">
+      <div class="card-head">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <h2>Patient &amp; Regimen</h2>
+      </div>
+      <div class="card-body">
+        <div class="fg2">
+          <div class="fg">
+            <label for="pt-name">Patient / MRN <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input type="text" id="pt-name" placeholder="e.g. J. Smith / 123456" />
+          </div>
+          <div class="fg">
+            <label for="pt-weight">Weight (kg) <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input type="number" id="pt-weight" min="10" max="300" step=".1" placeholder="70" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec-label">Current Dose</div>
+        <div class="fg3">
+          <div class="fg">
+            <label for="dose">Dose <sup>*</sup></label>
+            <input type="number" id="dose" min="1" max="20000" step="1" placeholder="1500" />
+            <span class="hint" id="dose-unit-hint">mg</span>
+          </div>
+          <div class="fg">
+            <label for="t-inf">Infusion duration <sup>*</sup></label>
+            <input type="number" id="t-inf" min=".25" max="12" step=".25" placeholder="1.5" />
+            <span class="hint">hours</span>
+          </div>
+          <div class="fg">
+            <label for="interval">Interval <sup>*</sup></label>
+            <select id="interval">
+              <option value="">Select…</option>
+              <option value="6">q6h</option>
+              <option value="8">q8h</option>
+              <option value="12" selected>q12h</option>
+              <option value="18">q18h</option>
+              <option value="24">q24h</option>
+              <option value="36">q36h</option>
+              <option value="48">q48h</option>
+              <option value="72">q72h</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec-label">Infusion Reference Time</div>
+        <div class="fg2">
+          <div class="fg">
+            <label for="inf-start">Infusion start time <sup>*</sup></label>
+            <input type="time" id="inf-start" />
+          </div>
+          <div class="fg">
+            <label>&nbsp;</label>
+            <div style="padding:.4375rem .75rem;border:1px solid var(--border);border-radius:var(--radius);
+              background:var(--gray-50);font-size:.875rem;color:var(--muted)" id="inf-end-disp">
+              Infusion end: —
+            </div>
+            <span class="hint">Calculated from duration above</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+        <h2>Serum Drug Levels</h2>
+        <span class="badge">Post-infusion · Same interval · Steady state</span>
+      </div>
+      <div class="card-body">
+        <div class="lvl-panel">
+          <div class="lvl-title"><span class="dot dot1"></span>Level 1 — Earlier draw</div>
+          <div class="fg2">
+            <div class="fg">
+              <label for="l1-time">Draw time <sup>*</sup></label>
+              <input type="time" id="l1-time" />
+              <div class="computed" id="l1-off"></div>
+            </div>
+            <div class="fg">
+              <label for="l1-conc">Concentration <sup>*</sup></label>
+              <input type="number" id="l1-conc" min=".01" max="100000" step=".1" placeholder="28.4" />
+              <span class="hint" id="l1-unit-hint">mg/L</span>
+            </div>
+          </div>
+        </div>
+        <div class="lvl-panel">
+          <div class="lvl-title"><span class="dot dot2"></span>Level 2 — Later draw</div>
+          <div class="fg2">
+            <div class="fg">
+              <label for="l2-time">Draw time <sup>*</sup></label>
+              <input type="time" id="l2-time" />
+              <div class="computed" id="l2-off"></div>
+            </div>
+            <div class="fg">
+              <label for="l2-conc">Concentration <sup>*</sup></label>
+              <input type="number" id="l2-conc" min=".01" max="100000" step=".1" placeholder="10.1" />
+              <span class="hint" id="l2-unit-hint">mg/L</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target overrides -->
+    <div class="card">
+      <div class="card-head">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <h2>Therapeutic Targets</h2>
+        <span class="badge" id="target-mode-badge">AUC-based</span>
+      </div>
+      <div class="card-body" id="target-section">
+        <!-- populated by updateTargetSection() -->
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="handleCalculate()">Calculate &amp; Recommend</button>
+  </div>
+
+  <!-- ════ RESULTS COLUMN ════ -->
+  <div id="results-col">
+    <div class="card">
+      <div class="card-head">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <h2>Results &amp; Recommendations</h2>
+      </div>
+      <div class="card-body" id="results-body">
+        <div class="placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <p>Select a drug, enter the regimen and<br>two serum levels, then click <strong>Calculate</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DRUG LIBRARY
+// ═══════════════════════════════════════════════════════════
+const DRUGS = [
+  // ── Glycopeptides ──────────────────────────────────────
+  {
+    id:'vancomycin', name:'Vancomycin', class:'Glycopeptide',
+    color:'#1d4ed8', colorBg:'#dbeafe', colorBr:'#bfdbfe',
+    units:'mg/L', doseStep:250, doseMin:250, doseMax:4000,
+    defaultTInf:1.5, defaultTau:12,
+    intervals:[6,8,12,24,36,48],
+    mode:'AUC',
+    AUC:{ lo:400, hi:600, unit:'mg·h/L' },
+    toxCmin:20, warnCmin:15,
+    micEnabled:true, defaultMIC:1,
+    guidelines:'ASHP/IDSA/SIDP 2020',
+    notes:[
+      'AUC/MIC monitoring preferred over trough-only per 2020 guidelines',
+      'Obtain levels at steady state (≥3–5 doses)',
+      'Monitor SCr and BUN every 48–72h',
+      'Target AUC/MIC 400–600 assumes organism MIC ≤ 1 mg/L'
+    ]
+  },
+  {
+    id:'teicoplanin', name:'Teicoplanin', class:'Glycopeptide',
+    color:'#6d28d9', colorBg:'#ede9fe', colorBr:'#c4b5fd',
+    units:'mg/L', doseStep:100, doseMin:100, doseMax:1600,
+    defaultTInf:.5, defaultTau:24,
+    intervals:[12,24,36,48,72],
+    mode:'trough',
+    trough:{ lo:10, hi:20, unit:'mg/L', label:'Trough' },
+    toxCmin:30, warnCmin:25,
+    micEnabled:false,
+    guidelines:'BSAC / UK CPA guidelines',
+    notes:[
+      'Very long t½ (~70–100h): allow 3–5 days to reach steady state',
+      'Loading doses required (3 doses q12h, then once-daily maintenance)',
+      'Target trough ≥15 mg/L for serious infections (endocarditis, osteomyelitis)',
+      'Two levels drawn close together may give unreliable Ke — space ≥6h apart'
+    ]
+  },
+  // ── Aminoglycosides ────────────────────────────────────
+  {
+    id:'gentamicin', name:'Gentamicin', class:'Aminoglycoside',
+    color:'#059669', colorBg:'#d1fae5', colorBr:'#6ee7b7',
+    units:'mg/L', doseStep:10, doseMin:10, doseMax:800,
+    defaultTInf:.5, defaultTau:8,
+    intervals:[8,12,24,36,48],
+    mode:'peak_trough',
+    peak:{ lo:5, hi:10, unit:'mg/L', timing:'30 min post-infusion' },
+    troughMax:{ val:2, unit:'mg/L' },
+    toxCmin:2, warnCmin:1,
+    micEnabled:true, defaultMIC:1,
+    guidelines:'IDSA / hospital-specific protocols',
+    notes:[
+      'Traditional: peak 5–10 mg/L, trough <2 mg/L',
+      'Synergy dosing (endocarditis): peak 3–5 mg/L, trough <1 mg/L',
+      'Trough >2 mg/L associated with nephrotoxicity',
+      'Extended-interval (once-daily) increasingly preferred for most indications'
+    ]
+  },
+  {
+    id:'tobramycin', name:'Tobramycin', class:'Aminoglycoside',
+    color:'#059669', colorBg:'#d1fae5', colorBr:'#6ee7b7',
+    units:'mg/L', doseStep:10, doseMin:10, doseMax:800,
+    defaultTInf:.5, defaultTau:8,
+    intervals:[8,12,24,36,48],
+    mode:'peak_trough',
+    peak:{ lo:5, hi:10, unit:'mg/L', timing:'30 min post-infusion' },
+    troughMax:{ val:2, unit:'mg/L' },
+    toxCmin:2, warnCmin:1,
+    micEnabled:true, defaultMIC:1,
+    guidelines:'IDSA / TSANZ (cystic fibrosis)',
+    notes:[
+      'Traditional: peak 5–10 mg/L, trough <2 mg/L',
+      'Pulmonary CF infections: target peak 8–12 mg/L',
+      'Monitor renal function; audiometry for prolonged courses',
+      'Synergy: peak 3–5 mg/L, trough <1 mg/L'
+    ]
+  },
+  {
+    id:'amikacin', name:'Amikacin', class:'Aminoglycoside',
+    color:'#059669', colorBg:'#d1fae5', colorBr:'#6ee7b7',
+    units:'mg/L', doseStep:50, doseMin:100, doseMax:3000,
+    defaultTInf:.5, defaultTau:24,
+    intervals:[8,12,24,36,48],
+    mode:'peak_trough',
+    peak:{ lo:20, hi:35, unit:'mg/L', timing:'30 min post-infusion' },
+    troughMax:{ val:10, unit:'mg/L' },
+    toxCmin:10, warnCmin:5,
+    micEnabled:true, defaultMIC:4,
+    guidelines:'IDSA guidelines',
+    notes:[
+      'Traditional: peak 20–35 mg/L, trough <10 mg/L',
+      'Serious/resistant infections: peak 25–40 mg/L',
+      'Extended-interval 15–20 mg/kg q24h increasingly preferred',
+      'Base dose on ideal or adjusted body weight in obesity'
+    ]
+  },
+  {
+    id:'netilmicin', name:'Netilmicin', class:'Aminoglycoside',
+    color:'#059669', colorBg:'#d1fae5', colorBr:'#6ee7b7',
+    units:'mg/L', doseStep:10, doseMin:10, doseMax:700,
+    defaultTInf:.5, defaultTau:8,
+    intervals:[8,12,24,36,48],
+    mode:'peak_trough',
+    peak:{ lo:6, hi:10, unit:'mg/L', timing:'30 min post-infusion' },
+    troughMax:{ val:2, unit:'mg/L' },
+    toxCmin:2, warnCmin:1,
+    micEnabled:false,
+    guidelines:'European TDM guidelines',
+    notes:[
+      'Considered less nephrotoxic and ototoxic than gentamicin or tobramycin',
+      'Serious infections: peak 6–10 mg/L, trough <2 mg/L',
+      'Synergy: peak 3–5 mg/L, trough <1 mg/L'
+    ]
+  },
+  {
+    id:'streptomycin', name:'Streptomycin', class:'Aminoglycoside',
+    color:'#059669', colorBg:'#d1fae5', colorBr:'#6ee7b7',
+    units:'mg/L', doseStep:100, doseMin:200, doseMax:2000,
+    defaultTInf:1, defaultTau:24,
+    intervals:[24,48,72],
+    mode:'peak_trough',
+    peak:{ lo:20, hi:40, unit:'mg/L', timing:'1h post-IM or 30 min post-IV end' },
+    troughMax:{ val:5, unit:'mg/L' },
+    toxCmin:5, warnCmin:3,
+    micEnabled:false,
+    guidelines:'WHO TB treatment guidelines',
+    notes:[
+      'Primarily used for tuberculosis, brucellosis, and endocarditis',
+      'Peak 20–40 mg/L (TB); some protocols target 35–45 mg/L',
+      'Risk of irreversible vestibular ototoxicity — monitor hearing and balance',
+      'Usually given IM; IV less common'
+    ]
+  },
+  // ── Lipopeptides ───────────────────────────────────────
+  {
+    id:'daptomycin', name:'Daptomycin', class:'Lipopeptide',
+    color:'#0891b2', colorBg:'#cffafe', colorBr:'#67e8f9',
+    units:'mg/L', doseStep:50, doseMin:50, doseMax:2000,
+    defaultTInf:.5, defaultTau:24,
+    intervals:[24,48],
+    mode:'trough',
+    trough:{ lo:5, hi:24.3, unit:'mg/L', label:'Trough' },
+    toxCmin:24.3, warnCmin:20,
+    micEnabled:true, defaultMIC:1,
+    guidelines:'European TDM consensus guidelines',
+    notes:[
+      'TDM recommended for serious infections or courses >7 days',
+      'Trough <24.3 mg/L to minimize myopathy risk',
+      'Monitor CK weekly; hold if CK >10× ULN',
+      'Inactive against pulmonary infections (inactivated by surfactant)',
+      'Dose on actual body weight; adjust for CrCl <30 mL/min'
+    ]
+  },
+  // ── Oxazolidinones ─────────────────────────────────────
+  {
+    id:'linezolid', name:'Linezolid', class:'Oxazolidinone',
+    color:'#d97706', colorBg:'#fef3c7', colorBr:'#fde68a',
+    units:'mg/L', doseStep:100, doseMin:200, doseMax:1200,
+    defaultTInf:.5, defaultTau:12,
+    intervals:[8,12],
+    mode:'AUC',
+    AUC:{ lo:200, hi:400, unit:'mg·h/L' },
+    toxCmin:8, warnCmin:6,
+    micEnabled:true, defaultMIC:1,
+    guidelines:'European TDM consensus / EUCAST',
+    notes:[
+      'TDM recommended for courses >2 weeks or toxicity concerns',
+      'Trough 2–8 mg/L associated with efficacy; >8 mg/L increases thrombocytopenia/neuropathy risk',
+      'AUC/MIC >100 h target for PD efficacy (most organisms MIC ≤ 2 mg/L)',
+      'Monitor CBC weekly; avoid serotonergic co-medications',
+      'Standard dose 600 mg q12h (rarely adjusted by dose; often by interval)'
+    ]
+  },
+  // ── Amphenicols ────────────────────────────────────────
+  {
+    id:'chloramphenicol', name:'Chloramphenicol', class:'Amphenicol',
+    color:'#7c3aed', colorBg:'#ede9fe', colorBr:'#c4b5fd',
+    units:'mg/L', doseStep:100, doseMin:100, doseMax:4000,
+    defaultTInf:.5, defaultTau:6,
+    intervals:[6,8,12],
+    mode:'peak_trough',
+    peak:{ lo:10, hi:25, unit:'mg/L', timing:'30–90 min post-infusion' },
+    troughMax:{ val:15, unit:'mg/L' },
+    toxCmin:15, warnCmin:12,
+    micEnabled:false,
+    guidelines:'BNF / clinical pharmacology references',
+    notes:[
+      'Peak >25 mg/L increases risk of bone marrow suppression',
+      'Grey syndrome risk in neonates and infants at elevated concentrations',
+      'Monitor CBC regularly — reversible and aplastic anaemia both reported',
+      'Reserved for specific resistant infections or CNS penetration requirements'
+    ]
+  },
+  // ── Antifungals ────────────────────────────────────────
+  {
+    id:'flucytosine', name:'Flucytosine (5-FC)', class:'Antifungal',
+    color:'#0284c7', colorBg:'#e0f2fe', colorBr:'#7dd3fc',
+    units:'mg/L', doseStep:250, doseMin:250, doseMax:6000,
+    defaultTInf:.5, defaultTau:6,
+    intervals:[6,8,12],
+    mode:'peak_trough',
+    peak:{ lo:30, hi:80, unit:'mg/L', timing:'2h post-dose' },
+    troughMax:{ val:50, unit:'mg/L' },
+    toxCmin:80, warnCmin:60,
+    micEnabled:false,
+    guidelines:'IDSA cryptococcal meningitis guidelines',
+    notes:[
+      'TDM strongly recommended — very narrow therapeutic index',
+      'Peak >80 mg/L associated with bone marrow toxicity',
+      'Always combined with amphotericin B for cryptococcal meningitis',
+      'Renally cleared — significant dose reduction required in renal impairment',
+      'Monitor CBC and LFTs weekly'
+    ]
+  },
+  {
+    id:'fluconazole', name:'Fluconazole', class:'Triazole Antifungal',
+    color:'#0284c7', colorBg:'#e0f2fe', colorBr:'#7dd3fc',
+    units:'mg/L', doseStep:50, doseMin:50, doseMax:1600,
+    defaultTInf:.5, defaultTau:24,
+    intervals:[24,48],
+    mode:'AUC',
+    AUC:{ lo:400, hi:800, unit:'mg·h/L' },
+    toxCmin:30, warnCmin:20,
+    micEnabled:true, defaultMIC:.5,
+    guidelines:'EUCAST / ESCMID Candida guidelines',
+    notes:[
+      'AUC/MIC target >25 h (some data support >50 h for invasive candidiasis)',
+      'Routine TDM not standard; use in renal impairment, drug interactions, or poor response',
+      'Strong CYP2C9/CYP3A4 inhibitor — review co-medications',
+      'Oral bioavailability ~90%; IV and oral interchangeable at same dose'
+    ]
+  },
+  // ── Methylxanthines ────────────────────────────────────
+  {
+    id:'theophylline', name:'Theophylline', class:'Methylxanthine',
+    color:'#b45309', colorBg:'#fef3c7', colorBr:'#fde68a',
+    units:'mg/L', doseStep:25, doseMin:25, doseMax:2000,
+    defaultTInf:.5, defaultTau:8,
+    intervals:[6,8,12,24],
+    mode:'trough',
+    trough:{ lo:10, hi:20, unit:'mg/L', label:'Trough' },
+    toxCmin:20, warnCmin:15,
+    micEnabled:false,
+    guidelines:'GINA / clinical pharmacology references',
+    notes:[
+      'Therapeutic range for acute bronchospasm: 10–20 mg/L',
+      'Narrower range 5–15 mg/L often preferred for COPD maintenance',
+      'Toxicity (seizures, arrhythmias) at >20 mg/L — narrow index',
+      'Highly variable kinetics: CYP1A2 substrate, affected by smoking, diet, and many drugs',
+      'Aminophylline salt contains ~80% theophylline by weight'
+    ]
+  },
+  // ── Barbiturates ───────────────────────────────────────
+  {
+    id:'phenobarbital', name:'Phenobarbital', class:'Barbiturate',
+    color:'#be185d', colorBg:'#fce7f3', colorBr:'#f9a8d4',
+    units:'mg/L', doseStep:15, doseMin:15, doseMax:600,
+    defaultTInf:.5, defaultTau:24,
+    intervals:[12,24,48],
+    mode:'trough',
+    trough:{ lo:15, hi:40, unit:'mg/L', label:'Trough' },
+    toxCmin:40, warnCmin:35,
+    micEnabled:false,
+    guidelines:'ILAE / clinical pharmacology references',
+    notes:[
+      'Long t½ (50–120h) — steady state takes 1–3 weeks',
+      'Sedation common above 40 mg/L; toxicity above 60 mg/L',
+      'Strong CYP inducer — many drug interactions',
+      'Range for neonatal seizures: 20–40 mg/L; febrile seizures: 10–20 mg/L',
+      'Status epilepticus IV loading: 15–20 mg/kg (up to 1 g at ≤50–100 mg/min)'
+    ]
+  },
+  // ── Custom ─────────────────────────────────────────────
+  {
+    id:'custom', name:'Custom Drug', class:'User-defined',
+    color:'#64748b', colorBg:'#f1f5f9', colorBr:'#cbd5e1',
+    units:'mg/L', doseStep:50, doseMin:10, doseMax:10000,
+    defaultTInf:1, defaultTau:12,
+    intervals:[6,8,12,24,36,48],
+    mode:'AUC',
+    AUC:{ lo:100, hi:400, unit:'mg·h/L' },
+    toxCmin:null, warnCmin:null,
+    micEnabled:false,
+    guidelines:'User-specified',
+    notes:['Configure targets and units in the Custom Drug Configuration section above'],
+    isCustom:true
+  }
+];
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let drug = DRUGS[0];
+
+// ═══════════════════════════════════════════════════════════
+//  TIME UTILITIES
+// ═══════════════════════════════════════════════════════════
+const parseHHMM = s => { if(!s) return null; const [h,m]=s.split(':').map(Number); return h+m/60; };
+const decHHMM   = d => { d=((d%24)+24)%24; const h=Math.floor(d),m=Math.round((d-h)*60); return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; };
+function timeDiff(s,e){ let d=e-s; if(d<0) d+=24; return d; }
+
+// ═══════════════════════════════════════════════════════════
+//  BUILD DRUG SELECTOR GRID
+// ═══════════════════════════════════════════════════════════
+function buildGrid(){
+  const grid=document.getElementById('drug-grid');
+  grid.innerHTML='';
+  DRUGS.forEach(d=>{
+    const modeLabel = d.mode==='AUC'?'AUC-based': d.mode==='peak_trough'?'Peak / Trough':'Trough';
+    const card=document.createElement('div');
+    card.className='drug-card';
+    card.dataset.id=d.id;
+    card.style.setProperty('--selected-color',d.color);
+    card.style.setProperty('--selected-bg',d.colorBg);
+    card.innerHTML=`
+      <div class="dc-class">
+        <span class="dc-dot" style="background:${d.color}"></span>
+        ${d.class}
+      </div>
+      <div class="dc-name">${d.name}</div>
+      <span class="dc-mode">${modeLabel}</span>`;
+    card.addEventListener('click',()=>selectDrug(d.id));
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SELECT DRUG
+// ═══════════════════════════════════════════════════════════
+function selectDrug(id){
+  drug=DRUGS.find(d=>d.id===id)||DRUGS[0];
+
+  // highlight card
+  document.querySelectorAll('.drug-card').forEach(c=>c.classList.toggle('selected',c.dataset.id===id));
+
+  // strip
+  const s=document.getElementById('drug-strip');
+  s.style.background=drug.colorBg;
+  s.style.borderColor=drug.colorBr;
+  document.getElementById('strip-name').textContent=drug.name;
+  document.getElementById('strip-name').style.color=drug.color;
+
+  const modeStr = drug.mode==='AUC' ? `AUC₂₄: ${drug.AUC.lo}–${drug.AUC.hi} ${drug.AUC.unit}`
+                : drug.mode==='peak_trough' ? `Peak: ${drug.peak.lo}–${drug.peak.hi} ${drug.peak.unit} · Trough: <${drug.troughMax.val} ${drug.troughMax.unit}`
+                : `Trough: ${drug.trough.lo}–${drug.trough.hi} ${drug.trough.unit}`;
+  document.getElementById('strip-target').textContent=modeStr;
+  document.getElementById('strip-target').style.borderColor=drug.colorBr;
+
+  const modeLabel = drug.mode==='AUC'?'AUC-based':drug.mode==='peak_trough'?'Peak/Trough':'Trough-based';
+  document.getElementById('strip-mode-label').textContent=modeLabel;
+  document.getElementById('strip-guideline').textContent=drug.guidelines;
+
+  // custom config panel
+  document.getElementById('custom-config').classList.toggle('hidden',!drug.isCustom);
+
+  // form defaults
+  const tau=document.getElementById('interval');
+  if(!tau.value || tau.value==='12') tau.value=String(drug.defaultTau);
+  const tinf=document.getElementById('t-inf');
+  if(!tinf.value) tinf.value=String(drug.defaultTInf);
+
+  // units
+  document.getElementById('dose-unit-hint').textContent='mg';
+  document.getElementById('l1-unit-hint').textContent=drug.units;
+  document.getElementById('l2-unit-hint').textContent=drug.units;
+
+  // target badge
+  document.getElementById('target-mode-badge').textContent=modeLabel;
+
+  updateTargetSection();
+  clearResults();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TARGET SECTION
+// ═══════════════════════════════════════════════════════════
+function updateTargetSection(){
+  const sec=document.getElementById('target-section');
+  const d=drug;
+
+  if(d.mode==='AUC'){
+    sec.innerHTML=`
+      <div class="fg2" style="max-width:420px">
+        <div class="fg">
+          <label for="t-auc-lo">AUC₂₄ minimum</label>
+          <input type="number" id="t-auc-lo" value="${d.AUC.lo}" min="0" step="10"/>
+          <span class="hint">${d.AUC.unit}</span>
+        </div>
+        <div class="fg">
+          <label for="t-auc-hi">AUC₂₄ maximum</label>
+          <input type="number" id="t-auc-hi" value="${d.AUC.hi}" min="0" step="10"/>
+          <span class="hint">${d.AUC.unit}</span>
+        </div>
+        ${d.micEnabled?`
+        <div class="fg">
+          <label for="t-mic">Organism MIC <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="number" id="t-mic" value="${d.defaultMIC||1}" min=".0625" step=".25" style="max-width:100px"/>
+          <span class="hint">${d.units} — shows AUC/MIC ratio</span>
+        </div>`:''}
+      </div>
+      <p class="hint" style="margin-top:.5rem">${d.guidelines}</p>`;
+  } else if(d.mode==='peak_trough'){
+    sec.innerHTML=`
+      <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-start">
+        <div class="fg"><label for="t-pk-lo">Peak minimum</label>
+          <input type="number" id="t-pk-lo" value="${d.peak.lo}" min="0" step="1" style="width:90px"/>
+          <span class="hint">${d.units}</span></div>
+        <div style="margin-top:1.5rem;color:var(--muted)">—</div>
+        <div class="fg"><label for="t-pk-hi">Peak maximum</label>
+          <input type="number" id="t-pk-hi" value="${d.peak.hi}" min="0" step="1" style="width:90px"/>
+          <span class="hint">${d.units}</span></div>
+        <div style="margin-top:1.5rem;color:var(--muted);margin-left:.5rem">·</div>
+        <div class="fg"><label for="t-tr-max">Trough limit</label>
+          <input type="number" id="t-tr-max" value="${d.troughMax.val}" min="0" step=".5" style="width:90px"/>
+          <span class="hint">${d.units} — must stay below</span></div>
+      </div>
+      <p class="hint" style="margin-top:.5rem">Peak timing: ${d.peak.timing}</p>
+      <p class="hint">${d.guidelines}</p>`;
+  } else { // trough
+    sec.innerHTML=`
+      <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-start">
+        <div class="fg"><label for="t-tr-lo">Trough minimum</label>
+          <input type="number" id="t-tr-lo" value="${d.trough.lo}" min="0" step="1" style="width:90px"/>
+          <span class="hint">${d.units}</span></div>
+        <div style="margin-top:1.5rem;color:var(--muted)">—</div>
+        <div class="fg"><label for="t-tr-hi">Trough maximum</label>
+          <input type="number" id="t-tr-hi" value="${d.trough.hi}" min="0" step="1" style="width:90px"/>
+          <span class="hint">${d.units}</span></div>
+      </div>
+      <p class="hint" style="margin-top:.5rem">${d.guidelines}</p>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LIVE OFFSET DISPLAY
+// ═══════════════════════════════════════════════════════════
+function updateOffsets(){
+  const is=parseHHMM(document.getElementById('inf-start').value);
+  const ti=parseFloat(document.getElementById('t-inf').value);
+  const ie=document.getElementById('inf-end-disp');
+  if(is!=null&&!isNaN(ti)) ie.textContent=`Infusion end: ${decHHMM(is+ti)}`;
+  else ie.textContent='Infusion end: —';
+  ['l1','l2'].forEach(p=>{
+    const t=parseHHMM(document.getElementById(`${p}-time`).value);
+    const el=document.getElementById(`${p}-off`);
+    if(is!=null&&t!=null) el.textContent=`${timeDiff(is,t).toFixed(2)} h after infusion start`;
+    else el.textContent='';
+  });
+}
+['inf-start','t-inf','l1-time','l2-time'].forEach(id=>
+  document.getElementById(id).addEventListener('input',updateOffsets));
+
+// ═══════════════════════════════════════════════════════════
+//  CORE PK CALCULATION
+// ═══════════════════════════════════════════════════════════
+function calcPK({dose,tInf,tau,t1,t2,C1,C2}){
+  const errs=[];
+  if(t1<=tInf) errs.push(`Level 1 (${t1.toFixed(2)}h from start) drawn during or before infusion ends (${tInf.toFixed(2)}h). Both levels must be post-infusion.`);
+  if(t2<=tInf) errs.push(`Level 2 (${t2.toFixed(2)}h from start) drawn during or before infusion ends.`);
+  if(t2<=t1)   errs.push('Level 2 must be drawn after Level 1.');
+  if(C1<=C2)   errs.push('Level 1 concentration must be greater than Level 2 (drug is eliminating; earlier = higher).');
+  if(t1>=tau)  errs.push(`Level 1 drawn at ${t1.toFixed(2)}h, beyond the dosing interval (${tau}h). Both levels must fall within one interval.`);
+  if(errs.length) return {errs};
+
+  const Ke = Math.log(C1/C2)/(t2-t1);
+  if(Ke<=0) return {errs:['Ke ≤ 0: concentrations suggest accumulation, not elimination. Check level order and values.']};
+
+  const t12  = .693147/Ke;
+  const Cmax = C1*Math.exp(Ke*(t1-tInf));   // true peak at end of infusion
+  const Cmin = Cmax*Math.exp(-Ke*(tau-tInf));// trough at dose time
+
+  // Vd: steady-state 1-compartment IV infusion
+  const R0 = dose/tInf;
+  const Vd = (R0/(Ke*Cmax)) * (1-Math.exp(-Ke*tInf)) / (1-Math.exp(-Ke*tau));
+  const Cl = Ke*Vd;
+  const AUC24 = dose*24/tau/Cl;
+
+  return {Ke,t12,Cmax,Cmin,Vd,Cl,AUC24};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DOSE RECOMMENDATIONS
+// ═══════════════════════════════════════════════════════════
+function recommend(pk,d,targets){
+  const {Ke,Vd,Cl}=pk;
+  const tInf=parseFloat(document.getElementById('t-inf').value);
+  const step=d.isCustom?(parseFloat(document.getElementById('c-step').value)||50):d.doseStep;
+  const dmin=d.doseMin, dmax=d.doseMax;
+
+  return d.intervals.map(tau=>{
+    let rawDose;
+
+    if(d.mode==='AUC'){
+      const mid=(targets.aucLo+targets.aucHi)/2;
+      rawDose = mid*Cl*tau/24;
+    } else if(d.mode==='peak_trough'){
+      const peakMid=(targets.pkLo+targets.pkHi)/2;
+      rawDose = peakMid*Ke*Vd*tInf*(1-Math.exp(-Ke*tau))/(1-Math.exp(-Ke*tInf));
+    } else { // trough
+      const troughMid=(targets.trLo+targets.trHi)/2;
+      const cmaxNeeded = troughMid/Math.exp(-Ke*(tau-tInf));
+      rawDose = cmaxNeeded*Ke*Vd*tInf*(1-Math.exp(-Ke*tau))/(1-Math.exp(-Ke*tInf));
+    }
+
+    let dose=Math.round(rawDose/step)*step;
+    dose=Math.max(dmin,Math.min(dmax,dose));
+
+    const R0=dose/tInf;
+    const projCmax=(R0/(Ke*Vd))*(1-Math.exp(-Ke*tInf))/(1-Math.exp(-Ke*tau));
+    const projCmin=projCmax*Math.exp(-Ke*(tau-tInf));
+    const projAUC=dose*24/tau/Cl;
+
+    let onTarget=false;
+    if(d.mode==='AUC')         onTarget=projAUC>=targets.aucLo&&projAUC<=targets.aucHi;
+    else if(d.mode==='peak_trough') onTarget=projCmax>=targets.pkLo&&projCmax<=targets.pkHi&&projCmin<=targets.trMax;
+    else                       onTarget=projCmin>=targets.trLo&&projCmin<=targets.trHi;
+
+    return {tau,dose,projCmax,projCmin,projAUC,onTarget};
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ICONS
+// ═══════════════════════════════════════════════════════════
+const iWarn=`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const iOk=`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+// ═══════════════════════════════════════════════════════════
+//  STATUS HELPERS
+// ═══════════════════════════════════════════════════════════
+function metricStatus(val,lo,hi){
+  if(val<lo) return 'low';
+  if(val>hi) return 'high';
+  return 'ok';
+}
+function pillClass(st){ return st==='ok'?'pill-ok':st==='low'?'pill-low':'pill-high'; }
+function badgeClass(st){ return st==='ok'?'mbadge-ok':st==='low'?'mbadge-low':'mbadge-high'; }
+function statusLabel(st){ return st==='ok'?`${iOk} On target`:st==='low'?`${iWarn} Below target`:`${iWarn} Above target`; }
+
+// ═══════════════════════════════════════════════════════════
+//  AUC BAR
+// ═══════════════════════════════════════════════════════════
+function aucBar(val,lo,hi){
+  // Show a window of roughly [0 … hi*1.8] so bar is informative
+  const maxBar=Math.max(hi*1.8, val*1.2, 100);
+  const pctVal=Math.min(val/maxBar*100,100);
+  const pctLo=lo/maxBar*100, pctW=(hi-lo)/maxBar*100;
+  return `
+    <div class="bar-wrap">
+      <div class="bar-labels">
+        <span>0</span><span>${Math.round(maxBar/2)}</span><span>${Math.round(maxBar)}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-zone" style="left:${pctLo.toFixed(1)}%;width:${pctW.toFixed(1)}%"></div>
+        <div class="bar-marker" style="left:${pctVal.toFixed(1)}%"></div>
+      </div>
+      <div class="bar-legend">
+        <span><span class="bleg-dot" style="background:rgba(22,163,74,.4);border:1px solid var(--success)"></span>Target zone (${lo}–${hi})</span>
+        <span><span class="bleg-dot" style="background:var(--primary)"></span>Current value</span>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER RESULTS
+// ═══════════════════════════════════════════════════════════
+function renderResults(pk,recs,targets,inputs){
+  const {Ke,t12,Cmax,Cmin,Vd,Cl,AUC24}=pk;
+  const d=drug;
+  const wt=inputs.weight;
+
+  // ── Primary metrics display ──
+  let metricsHTML='';
+
+  if(d.mode==='AUC'){
+    const st=metricStatus(AUC24,targets.aucLo,targets.aucHi);
+    metricsHTML=`
+      <div class="metric-block ${st}">
+        <div class="metric-label">AUC<sub>24</sub></div>
+        <div class="metric-val">${AUC24.toFixed(0)}</div>
+        <div class="metric-unit">${d.AUC.unit}</div>
+        <div class="metric-badge ${badgeClass(st)}">${statusLabel(st)}</div>
+      </div>`;
+    if(d.micEnabled&&inputs.mic){
+      const ratio=AUC24/inputs.mic;
+      const rSt=metricStatus(ratio,targets.aucLo,targets.aucHi);
+      metricsHTML+=`
+        <div class="metric-block ${rSt}">
+          <div class="metric-label">AUC<sub>24</sub>/MIC <span style="font-weight:400">(MIC ${inputs.mic})</span></div>
+          <div class="metric-val">${ratio.toFixed(0)}</div>
+          <div class="metric-unit">h</div>
+          <div class="metric-badge ${badgeClass(rSt)}">${statusLabel(rSt)}</div>
+        </div>`;
+    }
+    metricsHTML+=aucBar(AUC24,targets.aucLo,targets.aucHi);
+
+  } else if(d.mode==='peak_trough'){
+    const pkSt=metricStatus(Cmax,targets.pkLo,targets.pkHi);
+    const trSt=Cmin<=targets.trMax?'ok':'high';
+    metricsHTML=`
+      <div class="metrics-row">
+        <div class="metric-block ${pkSt}">
+          <div class="metric-label">Extrapolated Peak (C<sub>max</sub>)</div>
+          <div class="metric-val">${Cmax.toFixed(2)}</div>
+          <div class="metric-unit">${d.units}</div>
+          <div class="metric-badge ${badgeClass(pkSt)}">${statusLabel(pkSt)}</div>
+        </div>
+        <div class="metric-block ${trSt}">
+          <div class="metric-label">Extrapolated Trough (C<sub>min</sub>)</div>
+          <div class="metric-val">${Cmin.toFixed(2)}</div>
+          <div class="metric-unit">${d.units}</div>
+          <div class="metric-badge ${badgeClass(trSt)}">${trSt==='ok'?`${iOk} Below limit`:`${iWarn} Exceeds limit`}</div>
+        </div>
+      </div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">
+        AUC<sub>24</sub> (informational): <strong>${AUC24.toFixed(1)} mg·h/L</strong>
+      </div>
+      ${aucBar(Cmax,targets.pkLo,targets.pkHi)}`;
+
+  } else { // trough
+    const trSt=metricStatus(Cmin,targets.trLo,targets.trHi);
+    metricsHTML=`
+      <div class="metric-block ${trSt}">
+        <div class="metric-label">Extrapolated Trough (C<sub>min</sub>)</div>
+        <div class="metric-val">${Cmin.toFixed(2)}</div>
+        <div class="metric-unit">${d.units}</div>
+        <div class="metric-badge ${badgeClass(trSt)}">${statusLabel(trSt)}</div>
+      </div>
+      <div style="font-size:.8rem;color:var(--muted);margin:.375rem 0 .5rem">
+        AUC<sub>24</sub> (informational): <strong>${AUC24.toFixed(1)} mg·h/L</strong>
+      </div>
+      ${aucBar(Cmin,targets.trLo,targets.trHi)}`;
+  }
+
+  // ── Clinical alerts ──
+  const alerts=[];
+  if(d.toxCmin&&Cmin>d.toxCmin)  alerts.push({type:'danger',msg:`Extrapolated trough (${Cmin.toFixed(1)} ${d.units}) exceeds toxicity threshold (${d.toxCmin} ${d.units}). Consider dose reduction or interval extension.`});
+  else if(d.warnCmin&&Cmin>d.warnCmin) alerts.push({type:'warn',msg:`Extrapolated trough (${Cmin.toFixed(1)} ${d.units}) is elevated. Monitor closely.`});
+  if(t12>40) alerts.push({type:'warn',msg:`Half-life (${t12.toFixed(1)} hr) is prolonged — verify renal/hepatic function.`});
+  if(t12<2)  alerts.push({type:'warn',msg:`Half-life (${t12.toFixed(1)} hr) is very short — verify level timing accuracy.`});
+  const alertsHTML=alerts.map(a=>`<div class="alert alert-${a.type==='danger'?'danger':'warn'}">${iWarn}<span>${a.msg}</span></div>`).join('');
+
+  // ── PK parameters ──
+  const vdKg=wt?` <span style="color:var(--muted);font-weight:400;font-size:.8em">(${(Vd/wt).toFixed(2)} L/kg)</span>`:'';
+  const clKg=wt?` <span style="color:var(--muted);font-weight:400;font-size:.8em">(${(Cl/wt*1000/60).toFixed(3)} mL/kg/min)</span>`:'';
+
+  // ── Recommendations table ──
+  let recHeader='', recRows='';
+  if(d.mode==='AUC'){
+    recHeader=`<tr><th>Interval</th><th>Dose</th><th>AUC<sub>24</sub></th><th>Status</th></tr>`;
+    recRows=recs.map(r=>{
+      const st=metricStatus(r.projAUC,targets.aucLo,targets.aucHi);
+      return `<tr class="${r.onTarget?'best':''}">
+        <td><strong>q${r.tau}h</strong></td>
+        <td>${r.dose.toLocaleString()} mg</td>
+        <td><span class="pill ${pillClass(st)}">${r.projAUC.toFixed(0)} ${d.AUC.unit}</span></td>
+        <td>${r.onTarget?`<span style="color:var(--success);font-weight:600">${iOk} On target</span>`:
+          st==='low'?'↓ Low':'↑ High'}</td>
+      </tr>`;
+    }).join('');
+  } else if(d.mode==='peak_trough'){
+    recHeader=`<tr><th>Interval</th><th>Dose</th><th>Pred. Peak</th><th>Pred. Trough</th><th>Status</th></tr>`;
+    recRows=recs.map(r=>{
+      const pkSt=metricStatus(r.projCmax,targets.pkLo,targets.pkHi);
+      const trSt=r.projCmin<=targets.trMax?'ok':'high';
+      return `<tr class="${r.onTarget?'best':''}">
+        <td><strong>q${r.tau}h</strong></td>
+        <td>${r.dose.toLocaleString()} mg</td>
+        <td><span class="pill ${pillClass(pkSt)}">${r.projCmax.toFixed(1)}</span></td>
+        <td><span class="pill ${pillClass(trSt)}">${r.projCmin.toFixed(2)}</span></td>
+        <td>${r.onTarget?`<span style="color:var(--success);font-weight:600">${iOk} On target</span>`:
+          pkSt!=='ok'?`Peak ${pkSt}`:`Trough high`}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    recHeader=`<tr><th>Interval</th><th>Dose</th><th>Pred. Trough</th><th>AUC<sub>24</sub></th><th>Status</th></tr>`;
+    recRows=recs.map(r=>{
+      const trSt=metricStatus(r.projCmin,targets.trLo,targets.trHi);
+      return `<tr class="${r.onTarget?'best':''}">
+        <td><strong>q${r.tau}h</strong></td>
+        <td>${r.dose.toLocaleString()} mg</td>
+        <td><span class="pill ${pillClass(trSt)}">${r.projCmin.toFixed(2)} ${d.units}</span></td>
+        <td>${r.projAUC.toFixed(0)}</td>
+        <td>${r.onTarget?`<span style="color:var(--success);font-weight:600">${iOk} On target</span>`:
+          trSt==='low'?'↓ Low':'↑ High'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Clinical notes ──
+  const notesHTML=d.notes.map(n=>`<div class="alert alert-info">${n}</div>`).join('');
+
+  const dateStr=new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  document.getElementById('results-body').innerHTML=`
+    ${inputs.ptName?`<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Patient: <strong>${inputs.ptName}</strong></div>`:''}
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:.875rem">Drug: <strong>${d.name}</strong> · Calculated ${dateStr}</div>
+
+    ${metricsHTML}
+    ${alertsHTML}
+
+    <div class="divider"></div>
+    <div class="sec-label">Pharmacokinetic Parameters</div>
+    <table class="pk-table">
+      <tr><td>Elimination rate K<sub>e</sub></td>  <td>${Ke.toFixed(4)} hr<sup>−1</sup></td></tr>
+      <tr><td>Half-life t<sub>½</sub></td>         <td>${t12.toFixed(2)} hr</td></tr>
+      <tr><td>Volume of distribution V<sub>d</sub></td><td>${Vd.toFixed(2)} L${vdKg}</td></tr>
+      <tr><td>Clearance Cl</td>                    <td>${Cl.toFixed(3)} L/hr${clKg}</td></tr>
+      <tr><td>Extrapolated C<sub>max</sub></td>    <td>${Cmax.toFixed(3)} ${d.units}</td></tr>
+      <tr><td>Extrapolated C<sub>min</sub></td>    <td>${Cmin.toFixed(3)} ${d.units}</td></tr>
+    </table>
+
+    <div class="divider"></div>
+    <div class="sec-label">Dose Recommendations</div>
+    <p class="hint" style="margin-bottom:.625rem">Doses rounded to nearest ${d.isCustom?(parseFloat(document.getElementById('c-step').value)||50):d.doseStep} mg. Rows marked ✓ achieve the target.</p>
+    <table class="rec-table">
+      <thead>${recHeader}</thead>
+      <tbody>${recRows}</tbody>
+    </table>
+
+    <div class="divider" style="margin-top:.875rem"></div>
+    <div class="sec-label">Clinical Notes — ${d.name}</div>
+    ${notesHTML}
+
+    <details>
+      <summary>PK Equations &amp; Assumptions</summary>
+      <div class="eq-body">
+        <p><strong>Model:</strong> 1-compartment, first-order kinetics, steady state (≥3–5 doses), both levels post-infusion within one dosing interval.</p>
+        <p><code>Ke = ln(C₁/C₂) / (t₂ − t₁)</code></p>
+        <p><code>C<sub>max</sub> = C₁ × e^(Ke × (t₁ − t_inf))</code> — back-extrapolated to end of infusion</p>
+        <p><code>Vd = (Dose/t_inf) / (Ke × C<sub>max</sub>) × (1−e^{−Ke·t_inf}) / (1−e^{−Ke·τ})</code></p>
+        <p><code>Cl = Ke × Vd</code></p>
+        <p><code>AUC₂₄ = Dose × (24/τ) / Cl</code></p>
+        <p><code>New dose = Target × Cl × τ / 24</code> (AUC mode) or back-calculated from target Cmax/Cmin</p>
+        <p style="margin-top:.5rem;color:var(--danger)">Not validated for rapidly changing renal function, first/second doses, or drugs with saturable/non-linear kinetics.</p>
+      </div>
+    </details>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CLEAR RESULTS
+// ═══════════════════════════════════════════════════════════
+function clearResults(){
+  document.getElementById('results-body').innerHTML=`
+    <div class="placeholder">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <p>Enter regimen and two serum levels,<br>then click <strong>Calculate</strong>.</p>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER ERROR
+// ═══════════════════════════════════════════════════════════
+function renderError(errs){
+  document.getElementById('results-body').innerHTML=`
+    <div class="err-card">
+      <strong>Please correct the following:</strong>
+      <ul>${errs.map(e=>`<li>${e}</li>`).join('')}</ul>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  READ TARGETS
+// ═══════════════════════════════════════════════════════════
+function readTargets(){
+  const g=id=>parseFloat(document.getElementById(id)?.value)||0;
+  const d=drug;
+  if(d.isCustom){
+    const mode=document.getElementById('c-mode').value;
+    if(mode==='AUC')          return {aucLo:g('c-auc-lo'),aucHi:g('c-auc-hi')};
+    if(mode==='peak_trough')  return {pkLo:g('c-pk-lo'),pkHi:g('c-pk-hi'),trMax:g('c-tr-max')};
+    return {trLo:g('c-tr-lo'),trHi:g('c-tr-hi')};
+  }
+  if(d.mode==='AUC')         return {aucLo:g('t-auc-lo'),aucHi:g('t-auc-hi')};
+  if(d.mode==='peak_trough') return {pkLo:g('t-pk-lo'),pkHi:g('t-pk-hi'),trMax:g('t-tr-max')};
+  return {trLo:g('t-tr-lo'),trHi:g('t-tr-hi')};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CUSTOM DRUG — toggle target fields
+// ═══════════════════════════════════════════════════════════
+function updateCustomTargetFields(){
+  const mode=document.getElementById('c-mode')?.value||'AUC';
+  const show=ids=>ids.forEach(id=>document.getElementById(id)?.classList.remove('hidden'));
+  const hide=ids=>ids.forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  hide(['cf-auc-lo','cf-auc-hi','cf-pk-lo','cf-pk-hi','cf-tr-max','cf-tr-lo','cf-tr-hi']);
+  if(mode==='AUC')         show(['cf-auc-lo','cf-auc-hi']);
+  if(mode==='peak_trough') show(['cf-pk-lo','cf-pk-hi','cf-tr-max']);
+  if(mode==='trough')      show(['cf-tr-lo','cf-tr-hi']);
+  // update the drug mode live for custom
+  if(drug.isCustom) drug.mode=mode;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN CALCULATE HANDLER
+// ═══════════════════════════════════════════════════════════
+function handleCalculate(){
+  const get =id=>parseFloat(document.getElementById(id).value)||null;
+  const str =id=>document.getElementById(id).value.trim();
+  const time=id=>parseHHMM(document.getElementById(id).value);
+
+  const dose=get('dose'), tInf=get('t-inf'), tau=get('interval');
+  const infStart=time('inf-start');
+  const l1t=time('l1-time'), l2t=time('l2-time');
+  const C1=get('l1-conc'), C2=get('l2-conc');
+  const weight=get('pt-weight'), ptName=str('pt-name');
+  const mic=get('t-mic');
+
+  // mark required fields
+  const reqFields=[
+    ['dose',!dose],['t-inf',!tInf],['interval',!tau],
+    ['inf-start',infStart==null],['l1-time',l1t==null],
+    ['l2-time',l2t==null],['l1-conc',!C1],['l2-conc',!C2]
+  ];
+  reqFields.forEach(([id,bad])=>document.getElementById(id).classList.toggle('err',bad));
+  const missing=reqFields.filter(([,bad])=>bad).map(([id])=>id);
+  if(missing.length){renderError(['Please fill all required fields (marked in red).']);return;}
+
+  // time offsets
+  let t1=timeDiff(infStart,l1t);
+  let t2=timeDiff(infStart,l2t);
+  if(t2<=t1) t2+=24; // midnight crossing
+
+  // custom drug live mode sync
+  if(drug.isCustom) drug.mode=document.getElementById('c-mode')?.value||'AUC';
+
+  const pk=calcPK({dose,tInf,tau,t1,t2,C1,C2});
+  if(pk.errs){renderError(pk.errs);return;}
+
+  const targets=readTargets();
+  const recs=recommend(pk,drug,targets);
+  renderResults(pk,recs,targets,{weight,ptName,mic});
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DARK MODE
+// ═══════════════════════════════════════════════════════════
+function applyTheme(dark){
+  document.documentElement.dataset.theme = dark ? 'dark' : '';
+  document.getElementById('icon-moon').style.display = dark ? 'none' : '';
+  document.getElementById('icon-sun').style.display  = dark ? '' : 'none';
+  document.getElementById('theme-label').textContent  = dark ? 'Light' : 'Dark';
+}
+function toggleTheme(){
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  applyTheme(dark);
+}
+applyTheme(localStorage.getItem('theme') === 'dark');
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+buildGrid();
+selectDrug('vancomycin');
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.tagName!=='BUTTON') handleCalculate();
+});
+</script>
+</body>
+</html>
