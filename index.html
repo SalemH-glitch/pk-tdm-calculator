@@ -1460,11 +1460,26 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.target.tagName!=='BUTTON') handleCalculate();
 });
 
-// ── RxBar integration ──
-let _rxbar = null;
-if (window.RxBar) {
-  _rxbar = new RxBar('pk-tdm');
-}
+// Wrap handleCalculate to also save to Supabase (called after _rxbar is set below)
+const _origHandleCalculate = handleCalculate;
+window.handleCalculate = function() {
+  _origHandleCalculate();
+  if (!window._rxbar) return;
+  const drug = document.querySelector('.drug-card.selected')?.dataset?.id || 'unknown';
+  const wt   = document.getElementById('pt-weight')?.value;
+  const dose = document.getElementById('dose')?.value;
+  window._rxbar.saveCalculation(
+    `PK/TDM — ${drug}`,
+    { drug, weight: wt, dose },
+    { calculated: true }
+  );
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="rx-bar.js"></script>
+<script>
+// Runs after rx-bar.js is loaded so window.RxBar is available
+window._rxbar = new RxBar('pk-tdm');
 
 document.addEventListener('rxb:patient-selected', e => {
   const p = e.detail;
@@ -1480,23 +1495,6 @@ document.addEventListener('rxb:patient-cleared', () => {
   const nm = document.getElementById('pt-name');
   if (nm) nm.value = '';
 });
-
-// Wrap handleCalculate to also save to Supabase
-const _origHandleCalculate = handleCalculate;
-window.handleCalculate = function() {
-  _origHandleCalculate();
-  if (!_rxbar) return;
-  const drug = document.querySelector('.drug-card.selected')?.dataset?.id || 'unknown';
-  const wt   = document.getElementById('pt-weight')?.value;
-  const dose = document.getElementById('dose')?.value;
-  _rxbar.saveCalculation(
-    `PK/TDM — ${drug}`,
-    { drug, weight: wt, dose },
-    { calculated: true }
-  );
-};
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="rx-bar.js"></script>
 </body>
 </html>
