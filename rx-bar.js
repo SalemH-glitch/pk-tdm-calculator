@@ -39,6 +39,7 @@ class RxBar {
     this.profile = profile;
     this._inject();
     this._bind();
+    document.dispatchEvent(new CustomEvent('rxb:ready', { detail: { session, profile } }));
   }
 
   _inject() {
