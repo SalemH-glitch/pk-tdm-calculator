@@ -62,6 +62,7 @@ class RxBar {
         </div>
         <div class="rxb-user">
           <span class="rxb-username">${this._esc(this.profile?.full_name || this.session.user.email)}</span>
+          <button class="rxb-theme-toggle" id="rxb-theme-toggle" type="button"></button>
           <button class="rxb-signout" id="rxb-signout" type="button">Sign Out</button>
         </div>
       </div>`;
@@ -73,6 +74,29 @@ class RxBar {
       await this._sb.auth.signOut();
       window.location.href = RXB_PORTAL + 'index.html';
     });
+
+    const moonSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:block;pointer-events:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+    const sunSvg  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:block;pointer-events:none"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
+    const themeBtn = document.getElementById('rxb-theme-toggle');
+    if (themeBtn) {
+      const syncTheme = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        themeBtn.innerHTML = dark ? sunSvg : moonSvg;
+        themeBtn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      };
+      syncTheme();
+      themeBtn.addEventListener('click', () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (dark) {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('rxtools-theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('rxtools-theme', 'dark');
+        }
+        syncTheme();
+      });
+    }
 
     let timer;
     document.getElementById('rxb-search')?.addEventListener('input', e => {
