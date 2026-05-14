@@ -114,18 +114,24 @@ class RxBar {
   }
 
   async _search(query) {
-    let q = this._sb.from('patients')
-      .select('id, patient_id, first_name, last_name, weight_kg, height_cm, scr_mg_dl, crcl_ml_min, date_of_birth, gender, allergies')
-      .limit(8);
+    try {
+      let q = this._sb.from('patients')
+        .select('id, patient_id, first_name, last_name, weight_kg, height_cm, scr_mg_dl, crcl_ml_min, date_of_birth, gender, allergies')
+        .limit(8);
 
-    if (/^pt-/i.test(query)) {
-      q = q.ilike('patient_id', `${query}%`);
-    } else {
-      q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
+      if (/^pt-/i.test(query)) {
+        q = q.ilike('patient_id', `${query}%`);
+      } else {
+        q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      this._showDropdown(data || []);
+    } catch {
+      const dd = document.getElementById('rxb-dropdown');
+      if (dd) { dd.innerHTML = '<div class="rxb-dd-empty">Error loading patients</div>'; dd.style.display = 'block'; }
     }
-
-    const { data } = await q;
-    this._showDropdown(data || []);
   }
 
   _showDropdown(patients) {
@@ -312,6 +318,7 @@ class RxBar {
       const ln = document.getElementById('rxb-ln').value.trim();
       const errEl = document.getElementById('rxb-modal-error');
 
+      errEl.style.display = 'none';
       if (!fn || !ln) {
         errEl.textContent = 'First name and last name are required.';
         errEl.style.display = 'block';

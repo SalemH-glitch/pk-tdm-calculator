@@ -353,6 +353,59 @@
 .rxb-btn-save:hover { background: #0D47A1; }
 .rxb-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* ── Dark mode overrides ── */
+html[data-theme="dark"] .rxb-dropdown {
+  background: #1F2937;
+  border-color: #374151;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+html[data-theme="dark"] .rxb-dd-item {
+  border-bottom-color: #374151;
+}
+html[data-theme="dark"] .rxb-dd-item:hover { background: rgba(21,101,192,0.2); }
+html[data-theme="dark"] .rxb-dd-pid { background: rgba(21,101,192,0.25); color: #93C5FD; }
+html[data-theme="dark"] .rxb-dd-name { color: #F3F4F6; }
+html[data-theme="dark"] .rxb-dd-meta { color: #6B7280; }
+html[data-theme="dark"] .rxb-dd-empty { color: #6B7280; }
+
+html[data-theme="dark"] .rxb-modal-card {
+  background: #1F2937;
+  color: #F3F4F6;
+}
+html[data-theme="dark"] .rxb-modal-header { border-bottom-color: #374151; }
+html[data-theme="dark"] .rxb-modal-header h3 { color: #93C5FD; }
+html[data-theme="dark"] .rxb-modal-close { background: #374151; color: #9CA3AF; }
+html[data-theme="dark"] .rxb-modal-close:hover { background: #4B5563; }
+html[data-theme="dark"] .rxb-modal-field label { color: #9CA3AF; }
+html[data-theme="dark"] .rxb-modal-field input,
+html[data-theme="dark"] .rxb-modal-field select,
+html[data-theme="dark"] .rxb-modal-field textarea {
+  background: #111827;
+  border-color: #374151;
+  color: #F3F4F6;
+}
+html[data-theme="dark"] .rxb-modal-field input:focus,
+html[data-theme="dark"] .rxb-modal-field select:focus,
+html[data-theme="dark"] .rxb-modal-field textarea:focus {
+  background: #111827;
+  border-color: #2196F3;
+}
+html[data-theme="dark"] .rxb-modal-footer {
+  background: #111827;
+  border-top-color: #374151;
+}
+html[data-theme="dark"] .rxb-btn-cancel {
+  background: #1F2937;
+  border-color: #374151;
+  color: #9CA3AF;
+}
+html[data-theme="dark"] .rxb-btn-cancel:hover { border-color: #2196F3; color: #2196F3; }
+html[data-theme="dark"] .rxb-modal-error {
+  background: rgba(198,40,40,0.15);
+  border-color: rgba(198,40,40,0.35);
+  color: #EF5350;
+}
+
 /* Hide on print */
 @media print { #rxb-bar { display: none !important; } }
 
